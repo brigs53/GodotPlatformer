@@ -1,9 +1,11 @@
 extends KinematicBody2D
 
 export(float) var runSpeed = 20
-export(float) var xdecel = 1
+export(float) var xdecelGround = 1
+export(float) var xdecelAir = 0
 export(float) var xaccel = 2
 export(float) var velCap = 10
+export(float) var velAirReduction = 0.5
 var move = 0.0
 var velocity = Vector2()
 export(float) var jumpHeight = 40
@@ -36,26 +38,40 @@ func _physics_process(delta):
 			move = velCap
 		else:
 			move = -1*velCap
-		#deceleration
-	if(sign(move) != 0):
-		if(sign(move) == 1):
-			move -= xdecel
+		#deceleration on ground
+	if(sign(move) != 0 && is_on_floor() == true):
+		if(sign(move) == 1 && is_on_floor() == true):
+			move -= xdecelGround
 		else:
-			move += xdecel
-		
+			move += xdecelGround
+		#deceleration in air
+	if(sign(move) != 0 && is_on_floor() == false):
+		if(sign(move) == 1 && is_on_floor() == false):
+			move -= xdecelAir
+		else:
+			move += xdecelAir
 	#grounded movement
 	if(is_on_floor() == true):	
+		if(Input.is_action_pressed("ui_right")):
+			move += xaccel-velAirReduction
+			$AnimationPlayer.play("playerRun")
+		elif(Input.is_action_pressed("ui_left")):
+			move -= xaccel-velAirReduction
+			$AnimationPlayer.play("playerRun")
+		else:
+			velocity.x = 0
+			if(canIdle):
+				$AnimationPlayer.play("playerIdle")
+		#air movement
+	if(is_on_floor() == false):
 		if(Input.is_action_pressed("ui_right")):
 			move += xaccel
 			$AnimationPlayer.play("playerRun")
 		elif(Input.is_action_pressed("ui_left")):
 			move -= xaccel
 			$AnimationPlayer.play("playerRun")
-		else:
-			velocity.x = 0
-			if(canIdle):
-				$AnimationPlayer.play("playerIdle")
-		
+		#else:
+			#velocity.x = 0
 		
 	if(Input.is_action_just_pressed("jump") && is_on_floor() == true):
 		$AnimationPlayer.play("playerJump")
