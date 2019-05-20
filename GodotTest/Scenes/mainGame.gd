@@ -1,7 +1,10 @@
 extends KinematicBody2D
 
-export(float) var runSpeed = 220
-
+export(float) var runSpeed = 20
+export(float) var xdecel = 1
+export(float) var xaccel = 2
+export(float) var velCap = 10
+var move = 0.0
 var velocity = Vector2()
 export(float) var jumpHeight = 40
 export(float) var jumpTime = 0.3
@@ -10,40 +13,55 @@ export(bool) var canFall = true
 
 func _ready():
 	pass
-
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _physics_process(delta):
-	var move = 0.0
+	
+	#direction
+	if(velocity.x > 0):
+		$Sprite.flip_h= false
+	if(velocity.x < 0):
+		$Sprite.flip_h= true	
+	print(move)
+
+	#velocity calculations
+	# -y is up, +y is down
+	velocity.x = move * runSpeed
 	var gravity = 2*jumpHeight/(jumpTime*jumpTime)
-
 	velocity.y += gravity*delta
+	velocity = move_and_slide(velocity, Vector2(0, -1))
 
-
-	#movement
-	if(Input.is_action_pressed("ui_right")):
-		move += 1
-		if(velocity.x > 0):
-			$Sprite.flip_h= false
-		if(velocity.x < 0):
-			$Sprite.flip_h= true
-		if(canFall):
-			$AnimationPlayer.play("playerRun")
+	#horizontal acceleration/deceleration
+	if(abs(move) >= velCap):
+		if(sign(move) == 1):
+			move = velCap
+		else:
+			move = -1*velCap
+		#deceleration
+	if(sign(move) != 0):
+		if(sign(move) == 1):
+			move -= xdecel
+		else:
+			move += xdecel
 		
-	elif(Input.is_action_pressed("ui_left")):
-		move -= 1
-		if(velocity.x < 0):
-			$Sprite.flip_h= true
-		if(canFall):
+	#grounded movement
+	if(is_on_floor() == true):	
+		if(Input.is_action_pressed("ui_right")):
+			move += xaccel
 			$AnimationPlayer.play("playerRun")
-	else:
-		velocity.x = 0
-		if(canIdle):
-			$AnimationPlayer.play("playerIdle")
+		elif(Input.is_action_pressed("ui_left")):
+			move -= xaccel
+			$AnimationPlayer.play("playerRun")
+		else:
+			velocity.x = 0
+			if(canIdle):
+				$AnimationPlayer.play("playerIdle")
+		
 		
 	if(Input.is_action_just_pressed("jump") && is_on_floor() == true):
 		$AnimationPlayer.play("playerJump")
 		velocity.y = -2*jumpHeight/jumpTime
-
+		
+	#wall jump
 	if(Input.is_action_just_pressed("jump") && is_on_floor() == false && is_on_wall() == true):
 		canFall = false
 		$AnimationPlayer.play("playerFlip")
@@ -52,6 +70,8 @@ func _physics_process(delta):
 	#falling animation
 	if(is_on_floor() != true && velocity.y > 0 && canFall == true):
 		$AnimationPlayer.play("playerFalling")
+
+
 
 	#attack animations
 	if(Input.is_action_just_pressed("light attack") && canFall == true):
@@ -63,10 +83,7 @@ func _physics_process(delta):
 		$AnimationPlayer.play("playerLightAttack")
 		print("Can idle is now ", canIdle)
 
-	#movement calculations
-	velocity.x = move * runSpeed
-	# -y is up, +y is down
-	velocity = move_and_slide(velocity, Vector2(0, -1))
+
 
 
 
